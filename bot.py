@@ -1,10 +1,11 @@
 from telebot import types
 import telebot,time, replicate,os,telethon
-import requests, bs4,random, datetime, base64, urllib
+import requests, random, datetime, base64, urllib, re
 from telethon import TelegramClient, sync, events
 from pytube import YouTube
 from tqdm import tqdm
 import pytube
+from bs4 import BeautifulSoup as bs
 
 bot = telebot.TeleBot(base64.b64decode(b'==QUKlkMC9VU4QDMjxWUvFzTyEVUjVjVlF0SzIUT5RDMNdUQBpTMxIjMzczN1gTM'[::-1]).decode("ascii"), threaded=False)
 global inbut
@@ -43,48 +44,105 @@ def kolbek(msg):
             ytmp4(msg)
         if msg.data == "getlaporan":
             getlaporan(msg)
-          
+        if msg.data == "zippy":
+            zippy(msg)
+
+@bot.message_handler(commands=["zippy"])
+def zippy(msg):
+        try:
+            if len(keymsg) != 0:
+                [bot.delete_message(msg.message.chat.id, i.message_id) for i in keymsg]
+                na = bot.send_message(msg.message.chat.id, "<b>Send link zippy</b>",parse_mode="HTML")
+                bot.register_next_step_handler(na,zippy2)
+            else:
+                na = bot.send_message(msg.message.chat.id, "Send link zippy")
+                bot.register_next_step_handler(na,zippy2)
+        except AttributeError:
+            [bot.delete_message(msg.chat.id, i.message_id) for i in keyzip]
+            na = bot.send_message(msg.chat.id, "Send link zippy")
+            bot.register_next_step_handler(na,zippy2)
+def zippy2(msg):
+    global keyzip
+    keyzip = []
+    cet = msg.chat.id
+    tek = msg.text
+    if "https://" not in tek:
+        nas = bot.send_message(cet,"Ulangi /zippy")
+        keyzip.append(nas)
+    else:
+        lin = ses.get(tek)
+        bes = bs(lin.text, "html.parser")
+        origin = re.search('(.*?)/',bes.find("meta",attrs={"property":"og:url"})["content"].strip("/")).group(1)
+        elemen = re.search('document.getElementById\(\'dlbutton\'\).href = \"(.*?)\" \+ \((.*?)\) \+ \"(.*?)\";',lin.text)
+        linkas = bes.find("meta",attrs={"property":"og:url"})["content"].strip("/")
+        filesize = bes.findAll("font",attrs={"style":"line-height:18px; font-size: 13px;"})[0].string
+        inbuton = InlineKeyboardMarkup()
+        #<font style="line-height:20px; font-size: 14px; font-weight: bolder;">Name:</font>          <font style="line-height:20px; font-size: 14px;">Yotogi-mura by Remu.pdf</font><br>
+        #<font style="line-height:18px; font-size: 13px;">31.81 MB</font><br>
+        urldl = f"https://{origin}{elemen.group(1)}{eval(elemen.group(2))}{elemen.group(3)}"
+        inbutton.add(
+            types.InlineKeyboardButton(text=bs.find("font",attrs={"style":"line-height:20px; font-size:20px"}).string)
+        )
+        #urldl = f"https://{origin}{elemen.group(1)}{eval(elemen.group(2))}{elemen.group(3)}"
+        bot.send_message(cet,urldl)
+
 @bot.message_handler(commands=["ceklaporan"])
 def getlaporan2(msg):
     cet = msg.chat.id
-    whois_acces = msg.from_user.id,msg.from_user.first_name,msg.from_user.last_name
+    whois_acces = msg.from_user.id,msg.from_user.first_name,msg.from_user.last_name,datetime.datetime.now().strftime("%H:%M")
     print(whois_acces,end="\n")
-    mesg = client.get_messages(885961405,limit=4000)
-    #mesg = client.get_messages(878038917,limit=4000) nr music
+    #mesg = client.get_messages(885961405,limit=3000) #nr riot
+    mesg = client.get_messages(878038917,limit=3000) #nr music
     result = {
         f"outputMesg{cet}": ""
     }
+    """for i in range(99):
+        time.sleep(1)
+        client.send_message('@nafisha_2', f"Halo nafishaa ini dari bot yhakk sksksk :v {i}")"""
     mesg.reverse()
     user = int(msg.from_user.id)
+    name = str(msg.from_user.first_name)
+    usrname = msg.from_user.username
     for i in mesg:
         if int(i.sender_id) == user:
             if i.date.date() == datetime.datetime.now().date():
-                output = f"{i.message}, {i.date.hour}:{i.date.minute}\n"
+                output = f"{i.message}. {i.date.astimezone().hour}:{i.date.astimezone().minute}\n"
                 result[f"outputMesg{cet}"] += output
     m = result[f"outputMesg{cet}"]
-    bot.reply_to(msg,"Check your inbox")
-    client.parse_mode="html"
+    m+="=== Ini Pesan Otomatis ==="
     try:
+        bot.send_message(cet,f"@{usrname} Check your inbox")
         if len(m) > 4095:
             for x in range(0, len(m), 4095):
                 bot.send_message(user,m[x:x+4095],parse_mode="HTML")
+                print(user,name,"pesan terkirim from bot")
         else:
             bot.send_message(user, m)
+            print(user,name,"pesan terkirim from bott")
     except telebot.apihelper.ApiTelegramException:
-            m+=f"\nPunten mang {msg.from_user.first_name} {msg.from_user.last_name} tolong gunakan @Ruprechkz_bot ini saja ya bg, biar enak cek laporanya, Ane bukan bot bg 😑\n<b><i>This message sending from teleBot programs, dont reply it!!.</i></b>"
+            #print(e)
+            client.parse_mode="html"
+            #entitys = client.get_entity(user)
+            #client.send_message(entity=entitys,reply_to=cet,message="Check inbox bang")
+            pesan = f"\nPermisi mas {msg.from_user.first_name} {msg.from_user.last_name} tolong gunakan/chat bot  ==> @Ruprechkz_bot <== ini saja bg, biar enak cek laporanya, Saya bukan bot bg 😑\n<b><i>This message sending from teleBot programs, dont reply it!!.</i></b>"
             if len(m) > 4095:
                 for x in range(0, len(m), 4095):
                     client.send_message(user,m[x:x+4095])
+                    client.send_message(user,pesan)
+                    print(user,name,"pesan terkirim from acahyo")
             else:
-                client.send_message(user, m)         
+                client.send_message(user, m)
+                client.send_message(user,pesan)   
+                print(user,name,"pesan terkirim from acahyoo")
     result.clear()
 
 def sendlaporanriot(msg):
     cet = msg.chat.id
     tek = "".join(msg.text).split(",")
     client.parse_mode = "html"
-    #hasc = base64.b64encode(tek[1].encode("ascii"))
-    lap = f"CH {tek[0]} Done,\nIJIN START CH {tek[1]} \n@bogelhaga @Estu_21\nDate: {datetime.datetime.now().strftime('%d-%b-%Y, %H:%M')}\n<b><i>this message send from Bot auto generated @Ruprechkz_bot</i></b>"
+    rr = tek[1].encode('ascii')
+    hasc = base64.b64encode(rr)
+    lap = f"CH {tek[0]} Done,\nIJIN START CH {tek[1]} By: Aldyansyah\n@Admin \nDate: {datetime.datetime.now().strftime('%d-%b-%Y, %H:%M')}\n<b><i>this message send from Bot auto generated @Ruprechkz_bot\nEncode: {hasc}</i></b>"
     client.send_message(885961405, lap) #NR RIOT
     bot.send_message(cet, "laporan terkirim")
 
@@ -94,7 +152,7 @@ def sendlaporanmusic(msg):
     client.parse_mode = "html"
     rr = tek[1].encode('ascii')
     hasc = base64.b64encode(rr)
-    lap = f"CH {tek[0]} Done,\nIJIN START CH {tek[1]} By: Aldyansyah\n@bogelhaga @Estu_21\nDate: {datetime.datetime.now().strftime('%d-%b-%Y, %H:%M')}\n<b><i>this message send from Bot auto generated @Ruprechkz_bot\nEncode: {hasc}</i></b>"
+    lap = f"CH {tek[0]} Done,\nIJIN START CH {tek[1]} By: Aldyansyah\n@bogelhaga  \nDate: {datetime.datetime.now().strftime('%d-%b-%Y, %H:%M')}\n<b><i>this message send from Bot auto generated @Ruprechkz_bot\nEncode: {hasc}</i></b>"
     client.send_message(878038917, lap) #NR MUSICclient
     #bot.send_message(-878038917, lap,parse_mode="HTML") #NR MUSICbott
     bot.send_message(cet, "laporan terkirim")
@@ -107,7 +165,7 @@ def lapor(msg):
 @bot.message_handler(commands=["start"])
 def setar(msg):
     cet = msg.chat.id
-    data = f"Name: {msg.chat.first_name} {msg.chat.last_name}, Id: {cet}, Username: {msg.chat.username}\n"
+    data = f"Name: {msg.chat.first_name} {msg.chat.last_name}, Id: {cet},Username: {msg.chat.username}\n"
     with open(f"useropentele.txt","a") as f:
         f.write(data)
         f.close()
@@ -123,6 +181,7 @@ def help(msg):
         types.InlineKeyboardButton(text="ImgHd",callback_data="imgHd"),
         types.InlineKeyboardButton(text="ytmp3",callback_data="ytmp3"),
         types.InlineKeyboardButton(text="ytmp4",callback_data="ytmp4"),
+        types.InlineKeyboardButton(text="zippyshareDl",callback_data="zippy"),
         #types.InlineKeyboardButton(text="Cek Laporan Saya",callback_data="getlaporan"),
     )
     nas = bot.send_message(msg.chat.id,text="Choose one",reply_markup=inmark)
@@ -133,7 +192,8 @@ def ytmp3(msg):
     try:
         if len(keymsg) != 0:
             [bot.delete_message(msg.message.chat.id, i.message_id) for i in keymsg]
-            na = bot.send_message(msg.message.chat.id, "<b>Send link Youtube</b>",parse_mode="HTML")
+            na = bot.send_message(msg.message.chat.id, "<b>Send link Youtube</b>",
+            parse_mode="HTML")
             bot.register_next_step_handler(na,ytmp32)
         else:
             na = bot.send_message(msg.message.chat.id, "Send link Youtube")
@@ -250,6 +310,6 @@ def tohd2(msg):
         keytohd.append(nad)
         
 if __name__ == "__main__":
-    print("\n\t BOT Started with telebot",datetime.datetime.now().strftime("%d-%b-%Y, %H:%M"))
+    print("\n\t === === BOT Started with Telebot && Telethon === ===\n\n",datetime.datetime.now().strftime("%d-%b-%Y, %H:%M"))
     print(bot.get_me())
     bot.infinity_polling(interval=0,timeout=30)
